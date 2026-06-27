@@ -1,0 +1,95 @@
+{
+  "rows": 971,
+  "columns": 37,
+  "ok": true,
+  "n_errors": 0,
+  "n_warnings": 0,
+  "checks": [
+    {
+      "name": "non_empty",
+      "passed": true,
+      "severity": "error",
+      "detail": "971 rows"
+    },
+    {
+      "name": "required_columns_present",
+      "passed": true,
+      "severity": "error",
+      "detail": "all present"
+    },
+    {
+      "name": "unique_key",
+      "passed": true,
+      "severity": "error",
+      "detail": "0 duplicate (Year, Chemical) rows"
+    },
+    {
+      "name": "year_in_range",
+      "passed": true,
+      "severity": "error",
+      "detail": "0 rows outside [1987, 2100]"
+    },
+    {
+      "name": "measures_numeric",
+      "passed": true,
+      "severity": "error",
+      "detail": "all numeric"
+    },
+    {
+      "name": "no_negative_measures",
+      "passed": true,
+      "severity": "error",
+      "detail": "none"
+    },
+    {
+      "name": "no_fully_missing_measures",
+      "passed": true,
+      "severity": "warning",
+      "detail": "ok"
+    },
+    {
+      "name": "air_sum_consistency",
+      "passed": true,
+      "severity": "warning",
+      "detail": "0/939 rows where Total Air != Fugitive + Stack (>2%)"
+    },
+    {
+      "name": "expected_facility_present",
+      "passed": true,
+      "severity": "warning",
+      "detail": "ok"
+    }
+  ],
+  "metrics": {
+    "duplicate_keys": 0,
+    "year_min": 1988,
+    "year_max": 2024,
+    "missing_fraction": {
+      "Fugitive Air": 0.033,
+      "Stack Air": 0.033,
+      "Total Air": 0.033,
+      "Surface Water Discharge": 0.033,
+      "Underground Injection": 0.033,
+      "Land Disposal": 0.033,
+      "Total on-site release": 0.033,
+      "Off-site release": 0.6828,
+      "Total on- and off-site releases": 0.033,
+      "Transfer to recycling": 0.9454,
+      "Transfer to energy recovery": 0.9835,
+      "Transfer to treatment": 0.4037,
+      "Transfer to POTWs": 0.033,
+      "Other off-site transfer": 0.6828,
+      "Total transfers off-site for waste management": 0.033,
+      "Recycled on-site": 0.0,
+      "Recycled off-site": 0.0,
+      "Energy recovery on-site": 0.0,
+      "Energy recovery off-site": 0.0,
+      "Treated on-site": 0.0,
+      "Treated off-site": 0.0,
+      "Quantity released on- and off-site": 0.0,
+      "Total production-related waste managed": 0.0,
+      "Non production-related waste managed": 0.3172
+    },
+    "air_sum_violation_frac": 0.0
+  }
+}
