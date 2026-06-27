@@ -1,6 +1,11 @@
-# Pinned to the versions verified against this code. Native Streamlit charts
-# replace matplotlib, so that dependency has been dropped.
-streamlit==1.51.0
-pandas==2.3.3
-pyarrow==21.0.0
-openpyxl==3.1.5   # optional: lets the ETL read .xlsx exports too
+# Lower-bound constraints so managed platforms (e.g. Streamlit Community
+# Cloud) can resolve compatible wheels for their Python/OS. Exact "==" pins
+# tied to a local build often fail to install there.
+#
+# Minimums reflect features the code actually uses:
+#   streamlit >=1.36  -> horizontal bar_chart + chart x_label/y_label
+# Native Streamlit charts replace matplotlib, so it is not a dependency.
+streamlit>=1.36
+pandas>=2.0
+pyarrow>=14
+openpyxl>=3.1   # optional: lets the ETL read .xlsx exports too
