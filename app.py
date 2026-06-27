@@ -12,10 +12,12 @@ from __future__ import annotations
 import json
 import logging
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
 from config import AIR_COLUMNS, MEASUREMENT_UNIT, settings
+import analysis
 import etl
 import service
 
@@ -150,6 +152,128 @@ if emission_type in yearly.columns and not yearly.empty:
     cumulative = yearly[[emission_type]].cumsum()
     cumulative.columns = [f"Cumulative {emission_type}"]
     st.area_chart(cumulative, y_label=MEASUREMENT_UNIT, x_label="Year")
+
+# --- Emissions impact analysis (research) ----------------------------------
+# This section is analyte-focused (lead / mercury / PAHs) and uses the full
+# dataset rather than the sidebar filters, since the research targets fixed
+# groups via the atmospheric-deposition pathway.
+st.divider()
+st.header("🔬 Emissions impact analysis")
+st.caption(
+    "Atmospheric-deposition view for the analytes measured in sediment cores. "
+    "Air pathway = fugitive + stack emissions."
+)
+
+ic1, ic2 = st.columns([2, 3])
+group_name = ic1.selectbox(
+    "Analyte group", [*analysis.CHEMICAL_GROUPS.keys(), "All core analytes"]
+)
+air_only = ic2.toggle(
+    "Air pathway only (fugitive + stack)",
+    value=True,
+    help="Off = include the total on-/off-site release for context.",
+)
+
+group_chems = (
+    analysis.CORE_ANALYTES
+    if group_name == "All core analytes"
+    else analysis.CHEMICAL_GROUPS[group_name]
+)
+present = [c for c in group_chems if c in df["Chemical"].unique()]
+
+if not present:
+    st.info(f"None of the {group_name} analytes are present in this dataset.")
+else:
+    pathway = (
+        analysis.AIR_PATHWAY if air_only else ["Total on- and off-site releases"]
+    )
+    annual = analysis.annual_air_emissions(df, present, pathway)
+
+    if annual.dropna().empty:
+        st.info("No emissions recorded for this group/pathway.")
+    else:
+        cum = analysis.cumulative_burden(annual)
+        mk = analysis.mann_kendall(annual.index.astype(int), annual.values)
+        pct = analysis.pct_change_since_peak(annual)
+
+        k1, k2, k3, k4 = st.columns(4)
+        k1.metric("Cumulative burden", f"{cum.iloc[-1]:,.0f} {MEASUREMENT_UNIT}")
+        k2.metric("Peak year", str(int(annual.idxmax())))
+        trend_arrow = {"increasing": "↑", "decreasing": "↓"}.get(mk["trend"], "→")
+        k3.metric(
+            "Trend (Mann-Kendall)",
+            f"{trend_arrow} {mk['trend']}",
+            help=(
+                f"Sen's slope {mk['sen_slope']:,.1f} {MEASUREMENT_UNIT}/yr, "
+                f"p={mk['p']:.3f}, n={mk['n']}"
+                if mk["sen_slope"] is not None
+                else "Not enough data points"
+            ),
+        )
+        k4.metric(
+            "Change since peak",
+            "—" if pct is None else f"{pct:+.0f}%",
+        )
+
+        # Time series with regulatory-event markers (Altair ships with Streamlit).
+        plot_df = annual.rename("Emissions").reset_index()
+        plot_df["Year"] = plot_df["Year"].astype(int)
+        line = (
+            alt.Chart(plot_df)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("Year:Q", axis=alt.Axis(format="d", title="Year")),
+                y=alt.Y("Emissions:Q", title=f"Emissions ({MEASUREMENT_UNIT})"),
+                tooltip=["Year", alt.Tooltip("Emissions:Q", format=",.0f")],
+            )
+        )
+        ymin, ymax = int(plot_df["Year"].min()), int(plot_df["Year"].max())
+        events = [(y, lbl) for y, lbl in analysis.REGULATORY_EVENTS if ymin <= y <= ymax]
+        layers = [line]
+        if events:
+            ev_df = pd.DataFrame(events, columns=["Year", "label"])
+            rules = (
+                alt.Chart(ev_df)
+                .mark_rule(color="#d62728", strokeDash=[4, 4])
+                .encode(x="Year:Q", tooltip=["label"])
+            )
+            text = (
+                alt.Chart(ev_df)
+                .mark_text(align="left", angle=270, dx=4, dy=-4, color="#d62728")
+                .encode(x="Year:Q", text="label")
+            )
+            layers += [rules, text]
+        st.altair_chart(alt.layer(*layers).interactive(), use_container_width=True)
+
+        st.area_chart(
+            cum.rename("Cumulative burden"),
+            y_label=MEASUREMENT_UNIT,
+            x_label="Year",
+        )
+
+        # PAH source fingerprint: low Phenanthrene/Anthracene => pyrogenic
+        # (combustion) source such as a coke oven.
+        if group_name in ("PAHs", "All core analytes"):
+            ratio = analysis.pah_diagnostic_ratio(df, pathway=pathway)
+            if not ratio.empty:
+                st.subheader("PAH source fingerprint")
+                st.caption(
+                    "Phenanthrene/Anthracene ratio — low, stable values indicate "
+                    "a pyrogenic (combustion) source consistent with coke ovens."
+                )
+                rk1, rk2 = st.columns([1, 3])
+                rk1.metric("Latest Phe/Ant", f"{ratio.iloc[-1]:.2f}")
+                ratio_df = ratio.reset_index()
+                ratio_df["Year"] = ratio_df["Year"].astype(int)
+                rk2.altair_chart(
+                    alt.Chart(ratio_df)
+                    .mark_line(point=True)
+                    .encode(
+                        x=alt.X("Year:Q", axis=alt.Axis(format="d", title="Year")),
+                        y=alt.Y(f"{ratio.name}:Q", title="Phe/Ant ratio"),
+                    ),
+                    use_container_width=True,
+                )
 
 # --- Data quality + raw data -----------------------------------------------
 report = get_quality_report()
