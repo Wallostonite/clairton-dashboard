@@ -102,6 +102,10 @@ if filtered.empty:
     st.stop()
 
 yearly = service.yearly_emissions(filtered, AIR_COLUMNS)
+# Render the year axis as discrete labels ("2024") rather than a number, which
+# Streamlit would otherwise format with a thousands separator ("2,024").
+yearly.index = yearly.index.astype(str)
+yearly.index.name = "Year"
 kpis = service.summary_kpis(filtered, emission_type)
 
 # --- KPI row ---------------------------------------------------------------
