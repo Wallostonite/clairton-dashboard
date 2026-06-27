@@ -102,9 +102,11 @@ if filtered.empty:
     st.stop()
 
 yearly = service.yearly_emissions(filtered, AIR_COLUMNS)
-# Render the year axis as discrete labels ("2024") rather than a number, which
-# Streamlit would otherwise format with a thousands separator ("2,024").
-yearly.index = yearly.index.astype(str)
+# Use a real temporal axis for the year. As a plain integer Streamlit adds a
+# thousands separator ("2,024"); as a string it becomes categorical and rotates
+# all 37 labels vertical. A datetime index gives clean, horizontal, auto-spaced
+# year ticks (1990, 2000, ...).
+yearly.index = pd.to_datetime(yearly.index.astype(str), format="%Y")
 yearly.index.name = "Year"
 kpis = service.summary_kpis(filtered, emission_type)
 
